@@ -9,7 +9,7 @@
   "containerDefinitions": [
     {
       "name": "sneakchat-django",
-      "image": "852512029697.dkr.ecr.ap-south-1.amazonaws.com/sneakchat-django:{{IMAGE_TAG}}",
+      "image": "852512029697.dkr.ecr.ap-south-1.amazonaws.com/sneakchat-django:latest",
       "essential": true,
       "portMappings": [
         {
