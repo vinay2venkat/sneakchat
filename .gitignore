@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Django static
+staticfiles/
+
+# Virtualenv
+venv/
+.venv/
+
+# Environment variables
+*.env
+
+# Byte-compiled
+*.log
+
+# Node
+node_modules/
+dist/
+build/
+
+# Docker
+*.pid
+*.log
+docker-compose.override.yml

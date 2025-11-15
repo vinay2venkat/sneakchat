@@ -1,0 +1,32 @@
+version: "3.3"
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sneakdb
+      POSTGRES_USER: sneak
+      POSTGRES_PASSWORD: sneakpass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    build:
+      context: ../backend/django_app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://sneak:sneakpass@db:5432/sneakdb
+      - DJANGO_DEBUG=True
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/django_app:/app
+
+volumes:
+  pgdata:

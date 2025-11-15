@@ -1,0 +1,36 @@
+{
+  "family": "sneakchat-django-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::852512029697:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::852512029697:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "sneakchat-django",
+      "image": "852512029697.dkr.ecr.ap-south-1.amazonaws.com/sneakchat-django:{{IMAGE_TAG}}",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "DJANGO_DEBUG", "value": "false" },
+        { "name": "DJANGO_SECRET_KEY", "value": "<DJANGO_SECRET_KEY>" },
+        { "name": "DATABASE_URL", "value": "<DATABASE_URL>" },
+        { "name": "ALLOWED_HOSTS", "value": "<ALLOWED_HOSTS>" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/sneakchat-django",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

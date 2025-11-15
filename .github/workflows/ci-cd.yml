@@ -1,0 +1,71 @@
+name: CI/CD - Django -> ECR -> ECS
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPO: sneakchat-django
+  ECS_CLUSTER: sneakchat-cluster
+  ECS_SERVICE: sneakchat-django-service
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build & push image to ECR
+        id: build-image
+        run: |
+          TAG=${{ github.sha }}
+          ECR_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}"
+          docker build -t $ECR_URI:latest -t $ECR_URI:$TAG backend/django_app
+          docker push $ECR_URI:latest
+          docker push $ECR_URI:$TAG
+          echo "IMAGE_URI=$ECR_URI:$TAG" >> $GITHUB_ENV
+
+      - name: Prepare task definition
+        id: task-def
+        run: |
+          # replace placeholder with actual image tag in template
+          IMAGE_URI=${{ env.ECR_URI }}
+          sed "s|{{IMAGE_TAG}}|${{ github.sha }}|g" infra/ecs-task-def.json > /tmp/ecs-task-def.json
+          # update AWS_ACCOUNT_ID & REGION placeholders if present (optional)
+          echo "/tmp/ecs-task-def.json prepared"
+          cat /tmp/ecs-task-def.json
+
+      - name: Register new Task Definition
+        id: register-task
+        run: |
+          aws ecs register-task-definition \
+            --cli-input-json file:///tmp/ecs-task-def.json > /tmp/registered-task.json
+          echo "::set-output name=taskdef::$(jq -r '.taskDefinition.taskDefinitionArn' /tmp/registered-task.json)"
+
+      - name: Update ECS service
+        run: |
+          TASKDEF_ARN=$(jq -r '.taskDefinition.taskDefinitionArn' /tmp/registered-task.json)
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} --service ${{ env.ECS_SERVICE }} --task-definition $TASKDEF_ARN --force-new-deployment
